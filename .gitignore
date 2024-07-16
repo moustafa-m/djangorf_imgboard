@@ -9,5 +9,6 @@ __pycache__/
 *.egg-info/
 *.egg
 media/*
+!media/default.png
 *.vscode
 var/
