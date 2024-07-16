@@ -23,4 +23,4 @@ class PostCreate(generics.CreateAPIView):
 class PostDetails(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.Post.objects.all()
     serializer_class = serializers.PostSerializer
-    permission_classes = [permissions.PostUserOrReadOnly | permissions.AdminOrReadOnly]
+    permission_classes = [IsAuthenticated, permissions.PostUserOrReadOnly | permissions.AdminOrReadOnly]
