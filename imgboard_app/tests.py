@@ -60,7 +60,9 @@ class PostTestCase(APITestCase):
         self.client.force_authenticate(user=None)
         response = self.client.post(reverse('post_create'), data)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        models.Post.objects.get(pk=self.post.pk).image.delete()
+        
+        for obj in models.Post.objects.all():
+            obj.image.delete()
         self.post.image.delete()
     
     def test_post_put(self):
