@@ -97,3 +97,72 @@ class PostTestCase(APITestCase):
         self.assertEqual(0, models.Post.objects.all().count())
         self.post.image.delete()
 # <---- Posts tests
+
+# ----> Comments tests
+class CommentTestCase(APITestCase):
+    def setUp(self) -> None:
+        self.user = User.objects.create_user(username='testuser1',
+                                            password='testuser1')
+        self.user2 = User.objects.create_user(username='testuser2',
+                                            password='testuser2')
+        self.token = Token.objects.get(user__username = self.user.get_username())
+        self.token2 = Token.objects.get(user__username = self.user2.get_username())
+        
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+        
+        self.post = models.Post.objects.create(user=self.user,
+                                               title='test')
+        self.comment = models.Comment.objects.create(user=self.user,
+                                                      post=self.post,
+                                                      text='test comment')
+    
+    def test_comment_list(self):
+        response = self.client.get(reverse('post_comments', args=(self.post.pk,)))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    
+    def test_comment_get(self):
+        response = self.client.get(reverse('comment_details', args=(self.comment.pk,)))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    
+    def test_comment_post(self):
+        data = {
+            'text': 'test comment2'
+        }
+        
+        response = self.client.post(reverse('comment_create', args=(self.post.pk,)), data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(data['text'], models.Comment.objects.last().text)
+        
+        response = self.client.post(reverse('comment_create', args=(2,)), data)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def test_comment_put(self):
+        data = {
+            'text': 'updated test'
+        }
+        
+        response = self.client.put(reverse('comment_details', args=(self.comment.pk,)), data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(data['text'], models.Comment.objects.get(pk=self.comment.pk).text)
+        
+        # different user
+        diff_data = {
+            'text': 'not allowed'
+        }
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token2.key)
+        response = self.client.put(reverse('comment_details', args=(self.comment.pk,)), data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertNotEqual(diff_data['text'], models.Comment.objects.get(pk=self.comment.pk).text)
+    
+    def test_comment_delete(self):
+        # different user
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token2.key)
+        response = self.client.delete(reverse('comment_details', args=(self.comment.pk,)))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        
+        # comment owner
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+        response = self.client.delete(reverse('comment_details', args=(self.comment.pk,)))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(0, models.Comment.objects.count())
+# <---- Comments tests
