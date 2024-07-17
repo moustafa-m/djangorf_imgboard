@@ -4,6 +4,8 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.conf import settings
+from os import path
 
 from .api import serializers
 from . import models
@@ -37,10 +39,14 @@ class PostTestCase(APITestCase):
         self.client.force_authenticate(user=None)
         response = self.client.get(reverse('post_list'))
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        models.Post.objects.get(pk=self.post.pk).image.delete()
+        self.post.image.delete()
     
     def test_post_get(self):
         response = self.client.get(reverse('post_details', args=[self.post.pk]))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        models.Post.objects.get(pk=self.post.pk).image.delete()
+        self.post.image.delete()
     
     def test_post_post(self):
         data = {
@@ -54,25 +60,26 @@ class PostTestCase(APITestCase):
         self.client.force_authenticate(user=None)
         response = self.client.post(reverse('post_create'), data)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        models.Post.objects.get(pk=self.post.pk).image.delete()
+        self.post.image.delete()
     
     def test_post_put(self):
-        gif = (
-                b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00\x05\x04\x04'
-                b'\x00\x00\x00\x2c\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02\x44'
-                b'\x01\x00\x3b'
-            )
+        img_path = path.join(settings.MEDIA_ROOT, 'test_img.png')
         data = {
-            'image': SimpleUploadedFile('small.gif', gif, content_type='image/gif'),
+            'image': SimpleUploadedFile('small.gif', content=open(img_path, 'rb').read()),
             'title': 'test',
-            'text': 'test',
+            'text': 'new',
         }
         response = self.client.put(reverse('post_details', args=[self.post.pk]), data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(models.Post.objects.get(pk=self.post.pk).text, 'new')
         
         # different user
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token2.key)
         response = self.client.put(reverse('post_details', args=[self.post.pk]), data)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        models.Post.objects.get(pk=self.post.pk).image.delete()
+        self.post.image.delete()
     
     def test_post_delete(self):
         # different user
@@ -86,4 +93,5 @@ class PostTestCase(APITestCase):
         response = self.client.delete(reverse('post_details', args=[self.post.pk]))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(0, models.Post.objects.all().count())
+        self.post.image.delete()
 # <---- Posts tests
