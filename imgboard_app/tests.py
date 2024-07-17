@@ -74,7 +74,7 @@ class PostTestCase(APITestCase):
         }
         response = self.client.put(reverse('post_details', args=[self.post.pk]), data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(models.Post.objects.get(pk=self.post.pk).text, 'new')
+        self.assertEqual(models.Post.objects.get(pk=self.post.pk).text, data['text'])
         
         # different user
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token2.key)
