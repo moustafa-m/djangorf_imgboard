@@ -8,6 +8,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from .api import serializers
 from . import models
 
+# ----> Posts tests
 class PostTestCase(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='testuser1',
@@ -20,13 +21,13 @@ class PostTestCase(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
         
         # https://stackoverflow.com/a/50453780
-        small_gif = (
+        self.small_gif = (
                 b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x00\x00\x00\x21\xf9\x04'
                 b'\x01\x0a\x00\x01\x00\x2c\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02'
                 b'\x02\x4c\x01\x00\x3b'
             )
         self.post = models.Post.objects.create(user=self.user,
-                                               image=SimpleUploadedFile('small.gif', small_gif, content_type='image/gif'),
+                                               image=SimpleUploadedFile('small.gif', self.small_gif, content_type='image/gif'),
                                                title='test')
     
     def test_post_list(self):
@@ -40,6 +41,19 @@ class PostTestCase(APITestCase):
     def test_post_get(self):
         response = self.client.get(reverse('post_details', args=[self.post.pk]))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+    
+    def test_post_post(self):
+        data = {
+            'image': SimpleUploadedFile('small.gif', self.small_gif, content_type='image/gif'),
+            'title': 'test',
+            'text': 'test',
+        }
+        response = self.client.post(reverse('post_create'), data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        self.client.force_authenticate(user=None)
+        response = self.client.post(reverse('post_create'), data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
     
     def test_post_put(self):
         gif = (
@@ -72,3 +86,4 @@ class PostTestCase(APITestCase):
         response = self.client.delete(reverse('post_details', args=[self.post.pk]))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(0, models.Post.objects.all().count())
+# <---- Posts tests
