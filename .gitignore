@@ -10,5 +10,6 @@ __pycache__/
 *.egg
 media/*
 !media/default.png
+!media/test_img.png
 *.vscode
 var/
